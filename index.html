@@ -3,10 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI Code Reviewer</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.1/marked.min.js"></script>
+<title>AI Code Reviewer - AI驱动的代码审查工具</title>
+<meta name="description" content="AI Code Reviewer - 使用AI自动审查代码，发现潜在问题、安全漏洞和优化建议。支持多种编程语言。">
+<meta name="keywords" content="AI,代码审查,Code Review,DeepSeek,代码质量,安全漏洞检测">
+<meta property="og:title" content="AI Code Reviewer - AI驱动的代码审查工具">
+<meta property="og:description" content="使用AI自动审查代码，发现潜在问题、安全漏洞和优化建议。支持多种编程语言。">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔍</text></svg>">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" crossorigin="anonymous">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.1/marked.min.js" crossorigin="anonymous"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -78,6 +83,7 @@ header {
   border-radius: 8px;
   font-size: 0.85rem;
   width: 280px;
+  max-width: 100%;
   transition: border-color 0.2s;
 }
 
@@ -450,6 +456,19 @@ select:focus { outline: none; border-color: var(--accent); }
 <div class="toast" id="toast"></div>
 
 <script>
+// XSS sanitize: remove dangerous tags and attributes from HTML
+function sanitizeHtml(html) {
+  // Remove script, iframe, object, embed, form tags
+  html = html.replace(/<\s*\/?\s*(script|iframe|object|embed|form)\b[^>]*>/gi, '');
+  // Remove on* event attributes (onclick, onerror, onload, etc.)
+  html = html.replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+  // Remove javascript: protocol in href/src/action attributes
+  html = html.replace(/(href|src|action)\s*=\s*(?:"javascript:[^"]*"|'javascript:[^']*')/gi, '$1=""');
+  // Remove data: protocol in src (can be used for XSS)
+  html = html.replace(/src\s*=\s*(?:"data:[^"]*"|'data:[^']*')/gi, 'src=""');
+  return html;
+}
+
 const $ = (sel) => document.querySelector(sel);
 const codeInput = $('#codeInput');
 const resultContent = $('#resultContent');
@@ -606,7 +625,7 @@ async function startReview() {
           const delta = json.choices?.[0]?.delta?.content;
           if (delta) {
             fullText += delta;
-            resultDiv.innerHTML = marked.parse(fullText);
+            resultDiv.innerHTML = sanitizeHtml(marked.parse(fullText));
             // Highlight code blocks
             resultDiv.querySelectorAll('pre code').forEach((block) => {
               if (!block.dataset.highlighted) {
@@ -621,7 +640,7 @@ async function startReview() {
     }
 
     // Final render
-    resultDiv.innerHTML = marked.parse(fullText);
+    resultDiv.innerHTML = sanitizeHtml(marked.parse(fullText));
     resultDiv.querySelectorAll('pre code').forEach((block) => hljs.highlightElement(block));
     copyBtn.style.display = 'inline-flex';
 
