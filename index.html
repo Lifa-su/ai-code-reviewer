@@ -369,6 +369,142 @@ select:focus { outline: none; border-color: var(--accent); }
 
 .toast.show { transform: translateX(-50%) translateY(0); }
 
+/* Line Counter */
+.line-count {
+  font-size: 0.8rem;
+  color: var(--text2);
+  font-variant-numeric: tabular-nums;
+}
+.line-count.warn { color: var(--orange); }
+.line-count.over { color: var(--red); font-weight: 600; }
+
+/* Deep Analysis Pro Button */
+.btn-pro {
+  background: linear-gradient(135deg, #2d1b69, #1a1145);
+  border: 1px solid rgba(108,92,231,0.4);
+  color: var(--accent2);
+  padding: 0.4rem 0.8rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+  position: relative;
+}
+.btn-pro:hover { border-color: var(--accent); background: linear-gradient(135deg, #3a2280, #221558); }
+.pro-badge {
+  background: linear-gradient(135deg, var(--accent), #5a4bd1);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+/* Upgrade Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+.modal-overlay.active { opacity: 1; pointer-events: auto; }
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2rem;
+  max-width: 420px;
+  width: 90%;
+  text-align: center;
+}
+.modal h2 { font-size: 1.3rem; margin-bottom: 0.5rem; }
+.modal .modal-subtitle { color: var(--text2); font-size: 0.9rem; margin-bottom: 1.5rem; }
+.modal-features {
+  text-align: left;
+  margin-bottom: 1.5rem;
+}
+.modal-features li {
+  list-style: none;
+  padding: 0.5rem 0;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+.modal-features li:last-child { border-bottom: none; }
+.modal-features .feat-icon { font-size: 1.1rem; }
+.btn-upgrade {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, var(--accent), #5a4bd1);
+  color: #fff;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s;
+  width: 100%;
+  justify-content: center;
+}
+.btn-upgrade:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(108,92,231,0.5); }
+.modal-close {
+  margin-top: 1rem;
+  background: none;
+  border: none;
+  color: var(--text2);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.modal-close:hover { color: var(--text); }
+
+/* Pro Showcase Section */
+.pro-showcase {
+  max-width: 900px;
+  margin: 40px auto 0;
+  padding: 0 24px;
+}
+.pro-showcase-inner {
+  background: linear-gradient(135deg, rgba(108,92,231,0.08), rgba(0,206,201,0.05));
+  border: 1px solid rgba(108,92,231,0.25);
+  border-radius: var(--radius);
+  padding: 28px;
+}
+.pro-showcase h3 {
+  font-size: 1.1rem;
+  margin-bottom: 6px;
+}
+.pro-showcase .pro-desc {
+  color: var(--text2);
+  font-size: 0.85rem;
+  margin-bottom: 20px;
+}
+.pro-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+.pro-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+}
+.pro-card .card-icon { font-size: 1.5rem; margin-bottom: 8px; }
+.pro-card .card-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; }
+.pro-card .card-desc { font-size: 0.75rem; color: var(--text2); }
+.pro-showcase .btn-upgrade { margin-top: 20px; max-width: 300px; }
+
 /* Responsive */
 @media (max-width: 900px) {
   main {
@@ -429,7 +565,10 @@ select:focus { outline: none; border-color: var(--accent); }
     </div>
     <textarea id="codeInput" placeholder="在此粘贴你的代码..." spellcheck="false" aria-label="代码输入区域"></textarea>
     <div class="action-bar">
-      <span class="char-count" id="charCount">0 字符</span>
+      <div style="display:flex;align-items:center;gap:1rem">
+        <span class="char-count" id="charCount">0 字符</span>
+        <span class="line-count" id="lineCount">Lines: 0 / 500 (Free)</span>
+      </div>
       <button class="btn btn-primary" id="reviewBtn" onclick="startReview()">
         <span id="btnText">🚀 开始审查</span>
       </button>
@@ -441,8 +580,14 @@ select:focus { outline: none; border-color: var(--accent); }
     <div class="panel-header">
       <div class="panel-title">📋 审查结果</div>
       <div class="controls">
+        <button class="btn btn-pro" onclick="showUpgradeModal()" aria-label="Deep Analysis Pro">
+          ⚡ Deep Analysis <span class="pro-badge">🔒 PRO</span>
+        </button>
         <button class="btn btn-ghost" id="copyBtn" onclick="copyResult()" style="display:none" aria-label="复制结果">复制</button>
       </div>
+    </div>
+    <div style="padding:0.6rem 1.25rem;background:rgba(108,92,231,0.06);border-bottom:1px solid var(--border);font-size:0.8rem;color:var(--text2)">
+      💡 Get deeper code analysis with security audit, performance profiling, and architecture suggestions
     </div>
     <div class="result-content" id="resultContent">
       <div class="empty-state">
@@ -478,6 +623,8 @@ const charCount = $('#charCount');
 const apiKeyInput = $('#apiKey');
 const copyBtn = $('#copyBtn');
 const langSelect = $('#langSelect');
+const lineCount = $('#lineCount');
+const FREE_LINE_LIMIT = 500;
 
 // Persist API key
 apiKeyInput.value = localStorage.getItem('deepseek_api_key') || '';
@@ -485,10 +632,15 @@ apiKeyInput.addEventListener('change', () => {
   localStorage.setItem('deepseek_api_key', apiKeyInput.value.trim());
 });
 
-// Char count
-codeInput.addEventListener('input', () => {
-  charCount.textContent = `${codeInput.value.length} 字符`;
-});
+// Char count + line count
+function updateCounts() {
+  const val = codeInput.value;
+  charCount.textContent = `${val.length} 字符`;
+  const lines = val ? val.split('\n').length : 0;
+  lineCount.textContent = `Lines: ${lines} / ${FREE_LINE_LIMIT} (Free)`;
+  lineCount.className = 'line-count' + (lines > FREE_LINE_LIMIT ? ' over' : lines > 400 ? ' warn' : '');
+}
+codeInput.addEventListener('input', updateCounts);
 
 // Tab support in textarea
 codeInput.addEventListener('keydown', (e) => {
@@ -511,6 +663,8 @@ function showToast(msg, duration = 2500) {
 function clearCode() {
   codeInput.value = '';
   charCount.textContent = '0 字符';
+  lineCount.textContent = `Lines: 0 / ${FREE_LINE_LIMIT} (Free)`;
+  lineCount.className = 'line-count';
   codeInput.focus();
 }
 
@@ -518,6 +672,9 @@ function copyResult() {
   const text = resultContent.innerText;
   navigator.clipboard.writeText(text).then(() => showToast('✅ 已复制到剪贴板'));
 }
+
+function showUpgradeModal() { $('#upgradeModal').classList.add('active'); }
+function hideUpgradeModal() { $('#upgradeModal').classList.remove('active'); }
 
 let abortController = null;
 
@@ -527,6 +684,13 @@ async function startReview() {
 
   if (!apiKey) { showToast('⚠️ 请先输入 DeepSeek API Key'); apiKeyInput.focus(); return; }
   if (!code) { showToast('⚠️ 请先粘贴代码'); codeInput.focus(); return; }
+
+  // Free tier line limit
+  const lines = code.split('\n').length;
+  if (lines > FREE_LINE_LIMIT) {
+    showUpgradeModal();
+    return;
+  }
 
   const lang = langSelect.value === 'auto' ? '自动检测' : langSelect.value;
 
@@ -665,6 +829,53 @@ document.addEventListener('keydown', (e) => {
   }
 });
 </script>
+
+<!-- Pro Upgrade Modal -->
+<div class="modal-overlay" id="upgradeModal" onclick="if(event.target===this)hideUpgradeModal()">
+  <div class="modal">
+    <h2>🚀 Unlock Pro Code Review</h2>
+    <p class="modal-subtitle">Take your code quality to the next level</p>
+    <ul class="modal-features">
+      <li><span class="feat-icon">♾️</span> Unlimited code length</li>
+      <li><span class="feat-icon">🛡️</span> Deep security audit</li>
+      <li><span class="feat-icon">⚡</span> Performance profiling</li>
+      <li><span class="feat-icon">🏗️</span> Architecture suggestions</li>
+    </ul>
+    <a href="https://feifeicch.gumroad.com/ai-code-reviewer" target="_blank" rel="noopener" class="btn-upgrade">Upgrade to Pro — $19</a>
+    <button class="modal-close" onclick="hideUpgradeModal()">Maybe later</button>
+  </div>
+</div>
+
+<!-- Pro Showcase -->
+<section class="pro-showcase">
+  <div class="pro-showcase-inner">
+    <h3>⚡ Pro Code Review Features</h3>
+    <p class="pro-desc">Go beyond basic review — unlock advanced analysis tools used by professional teams.</p>
+    <div class="pro-grid">
+      <div class="pro-card">
+        <div class="card-icon">♾️</div>
+        <div class="card-title">Unlimited Code</div>
+        <div class="card-desc">No line limits. Review entire files and modules at once.</div>
+      </div>
+      <div class="pro-card">
+        <div class="card-icon">🛡️</div>
+        <div class="card-title">Security Audit</div>
+        <div class="card-desc">Deep vulnerability scanning with CVE references.</div>
+      </div>
+      <div class="pro-card">
+        <div class="card-icon">⚡</div>
+        <div class="card-title">Performance Profiling</div>
+        <div class="card-desc">Identify bottlenecks and get optimization strategies.</div>
+      </div>
+      <div class="pro-card">
+        <div class="card-icon">🏗️</div>
+        <div class="card-title">Architecture Review</div>
+        <div class="card-desc">Design pattern suggestions and structural improvements.</div>
+      </div>
+    </div>
+    <a href="https://feifeicch.gumroad.com/ai-code-reviewer" target="_blank" rel="noopener" class="btn-upgrade" style="margin-top:20px;max-width:300px">Upgrade to Pro — $19</a>
+  </div>
+</section>
 
 <!-- AFFILIATE:START -->
 <section style="max-width:900px;margin:40px auto 0;padding:0 24px">
