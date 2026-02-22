@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Code Reviewer</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.1/marked.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --surface2: #242736;
+  --border: #2e3148;
+  --text: #e4e6f0;
+  --text2: #8b8fa8;
+  --accent: #6c5ce7;
+  --accent2: #a29bfe;
+  --green: #00cec9;
+  --red: #ff6b6b;
+  --orange: #fdcb6e;
+  --radius: 12px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+/* Header */
+header {
+  background: linear-gradient(135deg, var(--surface) 0%, var(--surface2) 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.logo-icon {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, var(--accent), var(--green));
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
+.api-key-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.api-key-group input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  width: 280px;
+  transition: border-color 0.2s;
+}
+
+.api-key-group input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.api-key-group label {
+  font-size: 0.85rem;
+  color: var(--text2);
+  white-space: nowrap;
+}
+
+/* Main Layout */
+main {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  min-height: calc(100vh - 80px);
+}
+
+/* Panels */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel-header {
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface2);
+  flex-shrink: 0;
+}
+
+.panel-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+select {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+select:focus { outline: none; border-color: var(--accent); }
+
+/* Code Input */
+#codeInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  padding: 1.25rem;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 0.9rem;
+  resize: none;
+  line-height: 1.7;
+  tab-size: 2;
+}
+
+#codeInput:focus { outline: none; }
+
+#codeInput::placeholder { color: var(--text2); }
+
+/* Action Bar */
+.action-bar {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.char-count { font-size: 0.8rem; color: var(--text2); }
+
+.btn {
+  padding: 0.6rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), #5a4bd1);
+  color: white;
+}
+
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(108,92,231,0.4); }
+.btn-primary:active { transform: translateY(0); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text2);
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.8rem;
+  font-size: 0.82rem;
+}
+
+.btn-ghost:hover { color: var(--text); border-color: var(--text2); }
+
+/* Result Panel */
+.result-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem;
+}
+
+.result-content::-webkit-scrollbar { width: 6px; }
+.result-content::-webkit-scrollbar-track { background: transparent; }
+.result-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text2);
+  text-align: center;
+  gap: 1rem;
+  padding: 2rem;
+}
+
+.empty-state .icon { font-size: 3rem; opacity: 0.5; }
+.empty-state p { font-size: 0.95rem; max-width: 300px; }
+
+/* Loading */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 1.5rem;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-text { color: var(--text2); font-size: 0.9rem; }
+
+/* Markdown Result Styles */
+.review-result h1, .review-result h2, .review-result h3 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  color: var(--accent2);
+}
+
+.review-result h1 { font-size: 1.3rem; }
+.review-result h2 { font-size: 1.15rem; }
+.review-result h3 { font-size: 1rem; }
+
+.review-result p { margin-bottom: 0.75rem; }
+
+.review-result ul, .review-result ol {
+  margin-bottom: 0.75rem;
+  padding-left: 1.5rem;
+}
+
+.review-result li { margin-bottom: 0.4rem; }
+
+.review-result code {
+  background: var(--bg);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.85em;
+  color: var(--green);
+}
+
+.review-result pre {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  overflow-x: auto;
+}
+
+.review-result pre code {
+  background: none;
+  padding: 0;
+  color: var(--text);
+}
+
+.review-result blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 1rem;
+  margin-bottom: 0.75rem;
+  color: var(--text2);
+}
+
+.review-result strong { color: var(--orange); }
+
+.review-result table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0.75rem;
+}
+
+.review-result th, .review-result td {
+  border: 1px solid var(--border);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.review-result th { background: var(--surface2); color: var(--accent2); }
+
+.review-result hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.5rem 0;
+}
+
+/* Error */
+.error-msg {
+  background: rgba(255,107,107,0.1);
+  border: 1px solid rgba(255,107,107,0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  color: var(--red);
+  font-size: 0.9rem;
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  transition: transform 0.3s ease;
+  z-index: 100;
+}
+
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* Responsive */
+@media (max-width: 900px) {
+  main {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+  .panel { min-height: 45vh; }
+  header { padding: 1rem; }
+  .api-key-group input { width: 200px; }
+}
+
+@media (max-width: 500px) {
+  .api-key-group { flex-direction: column; align-items: flex-start; }
+  .api-key-group input { width: 100%; }
+  main { padding: 0.75rem; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🔍</div>
+    <span>AI Code Reviewer</span>
+  </div>
+  <div class="api-key-group">
+    <label for="apiKey">DeepSeek API Key:</label>
+    <input type="password" id="apiKey" placeholder="sk-..." autocomplete="off">
+  </div>
+</header>
+
+<main>
+  <!-- Input Panel -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">📝 代码输入</div>
+      <div class="controls">
+        <select id="langSelect" aria-label="选择编程语言">
+          <option value="auto">自动检测</option>
+          <option value="javascript">JavaScript</option>
+          <option value="typescript">TypeScript</option>
+          <option value="python">Python</option>
+          <option value="java">Java</option>
+          <option value="go">Go</option>
+          <option value="rust">Rust</option>
+          <option value="cpp">C++</option>
+          <option value="c">C</option>
+          <option value="csharp">C#</option>
+          <option value="php">PHP</option>
+          <option value="ruby">Ruby</option>
+          <option value="swift">Swift</option>
+          <option value="kotlin">Kotlin</option>
+          <option value="sql">SQL</option>
+          <option value="shell">Shell</option>
+        </select>
+        <button class="btn btn-ghost" onclick="clearCode()" aria-label="清空代码">清空</button>
+      </div>
+    </div>
+    <textarea id="codeInput" placeholder="在此粘贴你的代码..." spellcheck="false" aria-label="代码输入区域"></textarea>
+    <div class="action-bar">
+      <span class="char-count" id="charCount">0 字符</span>
+      <button class="btn btn-primary" id="reviewBtn" onclick="startReview()">
+        <span id="btnText">🚀 开始审查</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Result Panel -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">📋 审查结果</div>
+      <div class="controls">
+        <button class="btn btn-ghost" id="copyBtn" onclick="copyResult()" style="display:none" aria-label="复制结果">复制</button>
+      </div>
+    </div>
+    <div class="result-content" id="resultContent">
+      <div class="empty-state">
+        <div class="icon">🤖</div>
+        <p>粘贴代码并点击「开始审查」，AI 将从代码质量、安全漏洞、性能优化、最佳实践等维度进行分析</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (sel) => document.querySelector(sel);
+const codeInput = $('#codeInput');
+const resultContent = $('#resultContent');
+const reviewBtn = $('#reviewBtn');
+const btnText = $('#btnText');
+const charCount = $('#charCount');
+const apiKeyInput = $('#apiKey');
+const copyBtn = $('#copyBtn');
+const langSelect = $('#langSelect');
+
+// Persist API key
+apiKeyInput.value = localStorage.getItem('deepseek_api_key') || '';
+apiKeyInput.addEventListener('change', () => {
+  localStorage.setItem('deepseek_api_key', apiKeyInput.value.trim());
+});
+
+// Char count
+codeInput.addEventListener('input', () => {
+  charCount.textContent = `${codeInput.value.length} 字符`;
+});
+
+// Tab support in textarea
+codeInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const start = codeInput.selectionStart;
+    const end = codeInput.selectionEnd;
+    codeInput.value = codeInput.value.substring(0, start) + '  ' + codeInput.value.substring(end);
+    codeInput.selectionStart = codeInput.selectionEnd = start + 2;
+  }
+});
+
+function showToast(msg, duration = 2500) {
+  const toast = $('#toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), duration);
+}
+
+function clearCode() {
+  codeInput.value = '';
+  charCount.textContent = '0 字符';
+  codeInput.focus();
+}
+
+function copyResult() {
+  const text = resultContent.innerText;
+  navigator.clipboard.writeText(text).then(() => showToast('✅ 已复制到剪贴板'));
+}
+
+let abortController = null;
+
+async function startReview() {
+  const code = codeInput.value.trim();
+  const apiKey = apiKeyInput.value.trim();
+
+  if (!apiKey) { showToast('⚠️ 请先输入 DeepSeek API Key'); apiKeyInput.focus(); return; }
+  if (!code) { showToast('⚠️ 请先粘贴代码'); codeInput.focus(); return; }
+
+  const lang = langSelect.value === 'auto' ? '自动检测' : langSelect.value;
+
+  // UI: loading state
+  reviewBtn.disabled = true;
+  btnText.textContent = '⏳ 审查中...';
+  copyBtn.style.display = 'none';
+  resultContent.innerHTML = `<div class="loading"><div class="spinner"></div><div class="loading-text">AI 正在审查你的代码...</div></div>`;
+
+  abortController = new AbortController();
+
+  const systemPrompt = `你是一位资深代码审查专家，精通多种编程语言和软件工程最佳实践。请对用户提交的代码进行全面审查。
+
+请按以下维度进行分析，使用 Markdown 格式输出：
+
+## 📊 总体评分
+给出 1-10 分的评分和一句话总结。
+
+## 🔍 代码质量
+- 可读性、命名规范、代码结构
+- 重复代码、复杂度分析
+
+## 🛡️ 安全漏洞
+- 潜在的安全风险（注入、XSS、敏感信息泄露等）
+- 输入验证、权限控制
+
+## ⚡ 性能优化
+- 时间/空间复杂度
+- 可优化的性能瓶颈
+
+## ✅ 最佳实践
+- 是否遵循语言惯用写法
+- 错误处理、日志、测试建议
+
+## 💡 改进建议
+给出具体的改进代码示例（如有必要）。
+
+要求：
+- 分析要具体，引用代码行号或片段
+- 建议要可操作，不要泛泛而谈
+- 如果代码很好，也要指出亮点
+- 用中文回答`;
+
+  const userPrompt = `编程语言：${lang}\n\n\`\`\`\n${code}\n\`\`\``;
+
+  try {
+    const resp = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        stream: true,
+        temperature: 0.3,
+        max_tokens: 4096
+      }),
+      signal: abortController.signal
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.error?.message || `API 请求失败 (${resp.status})`);
+    }
+
+    // Stream reading
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let fullText = '';
+    let buffer = '';
+
+    resultContent.innerHTML = '<div class="review-result"></div>';
+    const resultDiv = resultContent.querySelector('.review-result');
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data: ')) continue;
+        const data = trimmed.slice(6);
+        if (data === '[DONE]') break;
+
+        try {
+          const json = JSON.parse(data);
+          const delta = json.choices?.[0]?.delta?.content;
+          if (delta) {
+            fullText += delta;
+            resultDiv.innerHTML = marked.parse(fullText);
+            // Highlight code blocks
+            resultDiv.querySelectorAll('pre code').forEach((block) => {
+              if (!block.dataset.highlighted) {
+                hljs.highlightElement(block);
+                block.dataset.highlighted = 'true';
+              }
+            });
+            resultContent.scrollTop = resultContent.scrollHeight;
+          }
+        } catch {}
+      }
+    }
+
+    // Final render
+    resultDiv.innerHTML = marked.parse(fullText);
+    resultDiv.querySelectorAll('pre code').forEach((block) => hljs.highlightElement(block));
+    copyBtn.style.display = 'inline-flex';
+
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      resultContent.innerHTML = '<div class="empty-state"><div class="icon">⏹️</div><p>审查已取消</p></div>';
+    } else {
+      resultContent.innerHTML = `<div class="error-msg">❌ ${err.message}</div>`;
+    }
+  } finally {
+    reviewBtn.disabled = false;
+    btnText.textContent = '🚀 开始审查';
+    abortController = null;
+  }
+}
+
+// Ctrl+Enter shortcut
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    if (!reviewBtn.disabled) startReview();
+  }
+});
+</script>
+
+</body>
+</html>
